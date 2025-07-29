@@ -112,6 +112,21 @@ metadata-py init-mdignore
 # Использовать собственный файл игнорирования
 metadata-py update --ignore-file .myignore --set version="1.0.0" .
 ```
+### Обновление версии через консоль
+
+```Bash
+# Add the changed files
+git add .
+
+# Create a commit with a descriptive message
+git commit -m "Bump version to 1.0.7 and update workflow"
+
+# Create a new tag for version 1.0.7
+git tag -a v1.0.7 -m "Version 1.0.7"
+
+# Push the tag to trigger the workflow
+git push origin v1.0.7
+```
 
 ## Полезные опции
 
