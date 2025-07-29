@@ -115,6 +115,9 @@ metadata-py update --ignore-file .myignore --set version="1.0.0" .
 ### Обновление версии через консоль
 
 ```Bash
+# Build the package
+python -m build
+
 # Add the changed files
 git add .
 
