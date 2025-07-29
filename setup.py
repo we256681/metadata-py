@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="metadata-py",
-    version="1.0.7",
+    version="1.0.8",
     author="we256681",
     author_email="we256681@gmail.com",
     description="Утилита для управления метаданными в markdown-файлах с автоматическим контролем версий и определением автора",
