@@ -1,0 +1,87 @@
+name: 📚 Auto Update Documentation
+
+on:
+  push:
+    branches: [main, master, develop]
+    paths: 
+      - '**/*.md'
+      - 'docs/**/*'
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - '**/*.md'
+      - 'docs/**/*'
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+    
+    - name: 📦 Install update-docs-system
+      run: |
+        pip install update-docs-system
+    
+    - name: 🔍 Check for .md changes
+      id: check_changes
+      run: |
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+        else
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+        fi
+        
+        if echo "$CHANGED_FILES" | grep -E '\\.md$'; then
+          echo "md_changed=true" >> $GITHUB_OUTPUT
+          echo "📝 Markdown files changed, updating documentation..."
+          echo "Changed files:"
+          echo "$CHANGED_FILES" | grep -E '\\.md$'
+        else
+          echo "md_changed=false" >> $GITHUB_OUTPUT
+          echo "ℹ️  No markdown files changed"
+        fi
+    
+    - name: 📚 Update documentation
+      if: steps.check_changes.outputs.md_changed == 'true'
+      run: |
+        update-docs --docs docs --content-json content/Content.json --description-md content/Description_for_agents.md
+        echo "✅ Documentation updated successfully"
+    
+    - name: 💾 Commit updated documentation
+      if: steps.check_changes.outputs.md_changed == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action Bot"
+        
+        mkdir -p content
+        git add content/Content.json content/Description_for_agents.md docs/ || true
+        
+        if git diff --staged --quiet; then
+          echo "ℹ️  No changes to commit"
+        else
+          git commit -m "📚 Auto-update documentation"
+          
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            git push
+            echo "✅ Documentation committed and pushed"
+          fi
+        fi
+    
+    - name: 📊 Summary
+      if: steps.check_changes.outputs.md_changed == 'true'
+      run: |
+        echo "## 📚 Documentation Update Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Content.json updated" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Description_for_agents.md refreshed" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Navigation links added" >> $GITHUB_STEP_SUMMARY

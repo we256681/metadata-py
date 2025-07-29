@@ -1,0 +1,30 @@
+node_modules
+.git
+.vscode
+.idea
+__pycache__
+*.pyc
+*.pyo
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+.env
+.env.local
+dist
+build
+target
+*.log
+# Markdown processing ignore file
+# Add patterns to ignore when processing markdown files
+
+# Common build/cache directories
+*.cache
+.pytest_cache
+.mypy_cache
+
+# Documentation build outputs
+docs/_build
+site/
+
+# Add your custom patterns below:
