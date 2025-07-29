@@ -35,7 +35,16 @@ jobs:
       - name: 🔍 Verify version
         run: |
           echo "Current version from setup.py:"
-          python -c "import re; print(re.search(r\"version=['\"]([^'\"]+)['\"]\", open('setup.py').read(), re.MULTILINE).group(1))"
+          python -c "
+          import re
+          with open('setup.py', 'r') as f:
+              content = f.read()
+          match = re.search(r'version\s*=\s*[\"\'](.*?)[\"\']', content)
+          if match:
+              print(match.group(1))
+          else:
+              print('Version not found')
+          "
 
       - name: 🔨 Build package
         run: |
