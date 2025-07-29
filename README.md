@@ -66,35 +66,61 @@ pip install metadata-py
 # Обработка конкретных файлов
 metadata-py README.md
 
-# Установка метаданных
-metadata-py README.md --set author="Имя Фамилия" --set version="1.0.0"
+## Основные команды
 
-# Удаление метаданных
-metadata-py README.md --remove
+### Обновление метаданных
 
-# Пробный запуск (предпросмотр изменений)
-metadata-py README.md --dry-run
+```bash
+# Обновить метаданные в конкретном файле
+metadata-py update README.md --set author="Имя Фамилия" --set version="1.0.0"
 
-# Отключение автоматического определения автора
-metadata-py README.md --no-auto-author
+# Обновить метаданные во всех markdown-файлах в текущей директории
+metadata-py update --set author="Имя Фамилия" --set version="1.0.0" .
 
-# Подробный вывод
-metadata-py README.md --verbose
+# Удалить метаданные из файла
+metadata-py update README.md --remove
 
-# Массовая обработка всех markdown-файлов
-metadata-py --bulk .
+# Предпросмотр изменений без сохранения
+metadata-py update --dry-run --set version="1.0.1" .
 
-# Массовая обработка всех markdown-файлов с задданым автором
-metadata-py --bulk . --set author="Имя Фамилия"
+# Игнорировать определенные файлы или директории
+metadata-py update --set author="Имя Фамилия" --ignore "drafts/*" --ignore "*.draft.md" .
 
-# Массовая обработка с игнорированием корневых файлов
-metadata-py --bulk . --exclude-root --set version="1.0.0"
+# Исключить файлы в корневой директории
+metadata-py update --exclude-root --set version="1.0.0" .
 
-# Показать список файлов для обработки
-metadata-py --bulk . --list-files
+# Отключить автоматическое определение автора
+metadata-py update --no-auto-author --set author="Имя Фамилия" .
+```
 
-# Показать информацию об авторах
-metadata-py --bulk . --show-info --verbose
+### Отчеты
+
+```bash
+# Показать отчет по всем markdown-файлам
+metadata-py report
+
+# Подробный отчет с дополнительной информацией
+metadata-py report --verbose
+```
+
+### Игнорирование файлов
+
+```bash
+# Создать файл .mdignore с настройками по умолчанию
+metadata-py init-mdignore
+
+# Использовать собственный файл игнорирования
+metadata-py update --ignore-file .myignore --set version="1.0.0" .
+```
+
+## Полезные опции
+
+- `--verbose, -v`: Подробный вывод (включая информацию об определении автора)
+- `--yes, -y`: Пропустить подтверждение
+- `--overwrite, -o`: Полностью перезаписать существующие метаданные
+- `--ignore, -i`: Шаблоны для игнорирования (можно использовать несколько раз)
+- `--ignore-file`: Указать файл с правилами игнорирования (по умолчанию: .gitignore)
+- `--exclude-root`: Исключить файлы в корневой директории
 
 # Добавление паттернов игнорирования
 metadata-py --bulk . --ignore "*.draft.md" --ignore "temp/*"
