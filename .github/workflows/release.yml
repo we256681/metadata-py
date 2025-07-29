@@ -35,7 +35,7 @@ jobs:
       - name: 🔍 Verify version
         run: |
           echo "Current version from setup.py:"
-          python -c "import re; print(re.search(r\"version=['\"]([^'\"]+)['\"]\", open('setup.py').read()).group(1))"
+          python -c "import re; print(re.search(r\"version=['\"]([^'\"]+)['\"]\", open('setup.py').read(), re.MULTILINE).group(1))"
 
       - name: 🔨 Build package
         run: |
