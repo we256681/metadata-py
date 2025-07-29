@@ -6,7 +6,7 @@ including version control integration, author detection, and bulk processing.
 """
 
 # Version of the package
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 # Import core functionality
 from .core import (
