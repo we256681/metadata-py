@@ -25,10 +25,10 @@ from .core import (
 def parse_args(args: List[str] = None) -> argparse.Namespace:
     """
     Parse command line arguments.
-    
+
     Args:
         args: List of command line arguments (defaults to sys.argv[1:])
-        
+
     Returns:
         Parsed arguments with all required attributes
     """
@@ -39,20 +39,20 @@ def parse_args(args: List[str] = None) -> argparse.Namespace:
 Examples:
   # Add/update metadata in all markdown files in the current directory
   metadata-py update --set author="John Doe" --set version=1.0.0
-  
+
   # Remove metadata from a specific file
   metadata-py update --remove test.md
-  
+
   # Process all markdown files except those in the docs/ directory
   metadata-py update --ignore "docs/*" --set author="John Doe"
-  
+
   # Create a report about markdown files in the project
   metadata-py report
-  
+
   # Create a default .mdignore file
   metadata-py init-mdignore"""
     )
-    
+
     # Common arguments for all commands
     common_parser = argparse.ArgumentParser(add_help=False)
     common_parser.add_argument(
@@ -61,10 +61,10 @@ Examples:
         action='store_true',
         help='Show verbose output including author detection details'
     )
-    
+
     # Subparsers for different commands
     subparsers = parser.add_subparsers(dest='command', help='Command to execute', required=True)
-    
+
     # Update command
     update_parser = subparsers.add_parser(
         'update',
@@ -135,7 +135,7 @@ Examples:
         default=False,
         help='Skip confirmation prompts'
     )
-    
+
     # Report command
     report_parser = subparsers.add_parser(
         'report',
@@ -147,7 +147,7 @@ Examples:
         '-o',
         help='Output file for the report (default: print to stdout)'
     )
-    
+
     # Init command
     init_parser = subparsers.add_parser(
         'init-mdignore',
@@ -161,17 +161,17 @@ Examples:
         default=False,
         help='Overwrite existing .mdignore file'
     )
-    
+
     # Parse arguments
     if args is None:
         args = sys.argv[1:]
-    
+
     parsed_args = parser.parse_args(args)
-    
+
     # Ensure all commands have a verbose attribute
     if not hasattr(parsed_args, 'verbose'):
         parsed_args.verbose = False
-    
+
     # Add default values for update command attributes
     if parsed_args.command == 'update':
         if not hasattr(parsed_args, 'files'):
@@ -192,18 +192,18 @@ Examples:
             parsed_args.no_auto_author = False
         if not hasattr(parsed_args, 'yes'):
             parsed_args.yes = False
-    
+
     return parsed_args
 
 
 def confirm(prompt: str = 'Continue?', default: bool = False) -> bool:
     """
     Ask for user confirmation.
-    
+
     Args:
         prompt: The prompt to display
         default: The default value if the user just presses Enter
-        
+
     Returns:
         bool: True if the user confirmed, False otherwise
     """
@@ -211,7 +211,7 @@ def confirm(prompt: str = 'Continue?', default: bool = False) -> bool:
         prompt = f"{prompt} [Y/n] "
     else:
         prompt = f"{prompt} [y/N] "
-    
+
     while True:
         try:
             response = input(prompt).strip().lower()
@@ -229,79 +229,91 @@ def confirm(prompt: str = 'Continue?', default: bool = False) -> bool:
 def parse_metadata_args(args: argparse.Namespace) -> Dict[str, Any]:
     """
     Parse metadata arguments into a dictionary.
-    
+
     Args:
         args: Parsed command line arguments
-        
+
     Returns:
         Dictionary of metadata key-value pairs
     """
     metadata = {}
-    
+
     # Parse --set key=value pairs
     if hasattr(args, 'set') and args.set:
         for item in args.set:
+            # Позволяем пустую строку как "автоматический режим"
+            if item == "" or item == "=":
+                continue
             if '=' in item:
                 key, value = item.split('=', 1)
                 metadata[key.strip()] = value.strip()
-    
     return metadata
-
 
 def handle_update_command(args: argparse.Namespace) -> int:
     """
     Handle the 'update' command.
-    
+
     Args:
         args: Parsed command line arguments
-        
+
     Returns:
         int: Exit code (0 for success, non-zero for error)
     """
     # Parse metadata arguments
     metadata = parse_metadata_args(args)
-    
-    # Check if we have anything to do
-    if not args.remove and not metadata and not args.overwrite:
-        print("No metadata specified to add/update. Use --help for usage.", file=sys.stderr)
-        return 1
-    
+
+    # Автоматический режим, если не указано --set, --remove, --overwrite
+    auto_mode = False
+    if hasattr(args, 'set') and args.set:
+        for item in args.set:
+            if item == "" or item == "=":
+                auto_mode = True
+    # Если не указано ни одного действия, но есть --dry-run и нет файлов, включаем авто-режим
+    if not args.remove and not metadata and not args.overwrite and not auto_mode:
+        if args.dry_run and not args.files:
+            auto_mode = True
+        else:
+            print("No metadata specified to add/update. Use --help for usage.", file=sys.stderr)
+            return 1
+
     try:
         # Get ignore patterns
         ignore_patterns = args.ignore or []
-        
+
+        # Определяем файл игнорирования, если указан
+        ignore_file = args.ignore_file if hasattr(args, 'ignore_file') else None
+
         # Check if we have any files to process
         if not args.files and not args.yes:
-            # If no files specified, confirm processing all files
             files = find_markdown_files(
                 root_dir='.',
-                ignore_patterns=ignore_patterns,
-                ignore_file=args.ignore_file,
-                exclude_root=args.exclude_root
+                ignore_patterns=ignore_patterns if ignore_patterns else None,
             )
+            if args.exclude_root:
+                files = [f for f in files if os.path.dirname(f) != '.']
             if not files:
                 print("No markdown files found to process.", file=sys.stderr)
                 return 1
-                
+
             print(f"Found {len(files)} markdown files to process.")
             if not confirm("Do you want to continue?", default=True):
                 print("Operation cancelled.")
                 return 0
-        
+
         # Process files
         if args.files:
             # Process specific files
             processed = 0
             modified = 0
-            
+
             for file_path in args.files:
                 if not os.path.exists(file_path):
                     print(f"Error: File not found: {file_path}", file=sys.stderr)
                     continue
-                    
+
                 if args.verbose:
                     print(f"Processing {file_path}...")
-                
+
                 try:
                     # Process the file
                     result = process_file(
@@ -313,47 +325,45 @@ def handle_update_command(args: argparse.Namespace) -> int:
                         auto_author=not args.no_auto_author,
                         verbose=args.verbose
                     )
-                    
+
                     processed += 1
                     if result and not args.dry_run:
                         modified += 1
                         if args.verbose:
                             print(f"  Updated {file_path}")
-                    
+
                 except Exception as e:
                     print(f"Error processing {file_path}: {e}", file=sys.stderr)
                     if args.verbose:
                         import traceback
                         traceback.print_exc()
                     return 1
-            
+
             if args.dry_run:
                 print(f"\nDry run complete. Would process {processed} files, modify {modified}.")
             else:
                 print(f"\nProcessed {processed} files, modified {modified}.")
-                
+
         else:
             # Process all markdown files
             total_files, modified_files = process_bulk(
                 root_dir='.',
-                new_metadata=metadata,
+                new_metadata=metadata if not auto_mode else None,
                 remove=args.remove,
                 overwrite=args.overwrite,
                 dry_run=args.dry_run,
-                ignore_patterns=ignore_patterns,
-                ignore_file=args.ignore_file,
-                exclude_root=args.exclude_root,
+                ignore_patterns=ignore_patterns if ignore_patterns else None,
+                include_root=not args.exclude_root,
+                ignore_file=ignore_file,
                 auto_author=not args.no_auto_author,
                 verbose=args.verbose
             )
-            
             if args.dry_run:
                 print(f"\nDry run complete. Would process {total_files} files, modify {modified_files}.")
             else:
                 print(f"\nProcessed {total_files} files, modified {modified_files}.")
-        
+
         return 0
-        
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         if args.verbose:
@@ -365,16 +375,16 @@ def handle_update_command(args: argparse.Namespace) -> int:
 def handle_report_command(args: argparse.Namespace) -> int:
     """
     Handle the 'report' command.
-    
+
     Args:
         args: Parsed command line arguments
-        
+
     Returns:
         int: Exit code (0 for success, non-zero for error)
     """
     # Generate the report
     report = generate_project_report(root_dir='.')
-    
+
     # Output the report
     if args.output:
         try:
@@ -386,26 +396,26 @@ def handle_report_command(args: argparse.Namespace) -> int:
             return 1
     else:
         print(report)
-    
+
     return 0
 
 
 def handle_init_mdignore_command(args: argparse.Namespace) -> int:
     """
     Handle the 'init-mdignore' command.
-    
+
     Args:
         args: Parsed command line arguments
-        
+
     Returns:
         int: Exit code (0 for success, non-zero for error)
     """
     ignore_file = '.mdignore'
-    
+
     if os.path.exists(ignore_file) and not args.force:
         print(f"Error: {ignore_file} already exists. Use --force to overwrite.", file=sys.stderr)
         return 1
-    
+
     try:
         create_ignore_file(ignore_file)
         print(f"Created {ignore_file} with default patterns.")
@@ -418,22 +428,22 @@ def handle_init_mdignore_command(args: argparse.Namespace) -> int:
 def main(args: List[str] = None) -> int:
     """
     Main entry point for the CLI.
-    
+
     Args:
         args: Command line arguments (defaults to sys.argv[1:])
-        
+
     Returns:
         int: Exit code (0 for success, non-zero for error)
     """
     try:
         # Parse command line arguments
         args = parse_args(args)
-        
+
         # Set up verbose output
         if args.verbose:
             import logging
             logging.basicConfig(level=logging.INFO)
-        
+
         # Dispatch to the appropriate handler
         if args.command == 'update':
             return handle_update_command(args)
@@ -445,7 +455,7 @@ def main(args: List[str] = None) -> int:
             # This should never happen as argparse should handle it
             print(f"Unknown command: {args.command}", file=sys.stderr)
             return 1
-    
+
     except KeyboardInterrupt:
         print("\nOperation cancelled by user.")
         return 1

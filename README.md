@@ -59,12 +59,82 @@ metadata-py поддерживает автоматическое семанти
 ```bash
 pip install metadata-py
 ```
+## metadata-py --help
+usage: metadata-py [-h] {update,report,init-mdignore} ...
+
+Manage metadata in markdown files.
+
+positional arguments:
+  {update,report,init-mdignore}
+                        Command to execute
+    update              Update metadata in markdown files
+    report              Generate a report about markdown files
+    init-mdignore       Create a default .mdignore file
+
+options:
+  -h, --help            show this help message and exit
+
+Examples:
+```Bash
+  # Add/update metadata in all markdown files in the current directory
+  metadata-py update --set author="John Doe" --set version=1.0.0
+
+  # Remove metadata from a specific file
+  metadata-py update --remove test.md
+
+  # Process all markdown files except those in the docs/ directory
+  metadata-py update --ignore "docs/*" --set author="John Doe"
+
+  # Create a report about markdown files in the project
+  metadata-py report
+
+  # Create a default .mdignore file
+  metadata-py init-mdignore
+```
+
+## metadata-py update --help
+- usage: metadata-py update
+   - [-h]
+   - [--verbose]
+   - [--set KEY=VALUE]
+   - [--remove]
+   - [--overwrite]
+   - [--dry-run]
+   - [--ignore IGNORE]
+   - [--ignore-file IGNORE_FILE]
+   - [--exclude-root]
+   - [--no-auto-author]
+   - [--yes]
+   - [files ...]
+
+- positional arguments:
+   - files                 Markdown files to process (default: all in current directory)
+
+- options:
+   -  -h, --help            show this help message and exit
+   -  --verbose, -v         Show verbose output including author detection details
+   -  --set KEY=VALUE, -s KEY=VALUE
+                        Set metadata key-value pairs (can be used multiple times)
+   -  --remove, -r          Remove metadata from files
+   -  --overwrite, -o       Completely overwrite existing metadata instead of updating
+   -  --dry-run, -n         Show what would be done without making changes
+   -  --ignore IGNORE, -i IGNORE
+                        Patterns to ignore (can be used multiple times)
+   -  --ignore-file IGNORE_FILE
+                        Path to ignore file (default: .gitignore if exists)
+   -  --exclude-root        Exclude files in the root directory when bulk processing
+   -  --no-auto-author      Disable automatic author detection
+   -  --yes, -y             Skip confirmation prompts
 
 ## Использование
 
 ```bash
-# Обработка конкретных файлов
-metadata-py README.md
+# Обработка всех markdown-файлов в текущей директории и поддиректориях с автоматическим определением автора и версией:
+metadata-py update --set "" .
+# или просто:
+metadata-py update .
+# (если не указаны --set, автор и версия будут определены автоматически)
+```
 
 ## Основные команды
 
@@ -144,8 +214,7 @@ git push origin v1.0.7
 metadata-py --bulk . --ignore "*.draft.md" --ignore "temp/*"
 
 # Для предварительного просмотра изменений без их применения
-metadata-py --bulk . --dry-run
-```python3 scripts/metadata_new.py --bulk . --dry-run --verbose
+metadata-py --bulk . --dry-run --verbose
 
 # Создание файла игнорирования
 python3 scripts/metadata_new.py --create-ignore .mdignore
