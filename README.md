@@ -11,7 +11,7 @@
 - **Отчёты**: Генерация подробных отчётов о состоянии метаданных в проекте
 - **Dry-run режим**: Предварительный просмотр изменений без их применения
 
-## Установка
+## Установка.
 
 ```bash
 pip install metadata-py
@@ -229,6 +229,21 @@ repos:
         language: system
         files: \.md$
 ```
+
+## Публикация в PYPI
+
+https://pypi.org/project/metadata-py/
+
+```Bash
+git add .
+
+git commit -m "Bump version to 1.1.0 and update workflow"
+
+git tag -a v1.1.0 -m "Version 1.1.0"
+
+git push origin v1.1.0
+```
+
 
 ## Требования
 
