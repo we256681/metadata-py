@@ -450,30 +450,37 @@ def analyze_document_changes(old_content: str, new_content: str) -> str:
     Returns:
         str: The type of version bump needed ('major', 'medium', 'minor')
     """
-    # Extract all headings from old and new content
+    # Извлекаем все заголовки из старого и нового содержимого
+    import re
     def get_headings(text):
-        import re
         headings = re.findall(r'^(#{1,6})\s+(.+)$', text, re.MULTILINE)
-        return [h[0] for h in headings], [h[1].strip() for h in headings]
+        # Убираем лишние пробелы и нормализуем
+        return [(l, h.strip()) for l, h in headings]
 
-    old_levels, old_headings = get_headings(old_content)
-    new_levels, new_headings = get_headings(new_content)
+    old_headings = get_headings(old_content)
+    new_headings = get_headings(new_content)
 
-    # Check for major changes (main headings added/removed/changed)
-    old_main = [h for l, h in zip(old_levels, old_headings) if l == '#']
-    new_main = [h for l, h in zip(new_levels, new_headings) if l == '#']
+    # Для отладки: печать заголовков если verbose
+    import os
+    if os.environ.get('METADATA_PY_VERBOSE') == '1':
+        print('OLD MAIN:', [h for l, h in old_headings if l == '#'])
+        print('NEW MAIN:', [h for l, h in new_headings if l == '#'])
+        print('OLD SUB:', [(l, h) for l, h in old_headings if l != '#'])
+        print('NEW SUB:', [(l, h) for l, h in new_headings if l != '#'])
 
-    if set(old_main) != set(new_main):
+    # Проверяем изменения в заголовках первого уровня (major)
+    old_main = [h for l, h in old_headings if l == '#']
+    new_main = [h for l, h in new_headings if l == '#']
+    if old_main != new_main:
         return 'major'
 
-    # Check for medium changes (subheadings changed/added/removed)
-    old_sub = [(l, h) for l, h in zip(old_levels, old_headings) if l != '#']
-    new_sub = [(l, h) for l, h in zip(new_levels, new_headings) if l != '#']
-
-    if set(old_sub) != set(new_sub):
+    # Проверяем изменения в подзаголовках (medium)
+    old_sub = [(l, h) for l, h in old_headings if l != '#']
+    new_sub = [(l, h) for l, h in new_headings if l != '#']
+    if old_sub != new_sub:
         return 'medium'
 
-    # If only content changed, it's a minor update
+    # Если изменилось только содержимое — minor
     return 'minor'
 
 def increment_version(current_version: str, bump_type: str) -> str:
@@ -540,7 +547,19 @@ def add_or_update_metadata(
     if old_content is not None and old_content != content_without_metadata:
         change_type = analyze_document_changes(old_content, content_without_metadata)
         current_version = metadata.get('version', '0.0.0')
-        metadata['version'] = increment_version(current_version, change_type)
+        new_version = increment_version(current_version, change_type)
+        import os
+        if os.environ.get('METADATA_PY_VERBOSE') == '1':
+            # Для отладки: покажем тип изменения, старую и новую версию
+            print(f"[VERBOSE] Version bump type: {change_type}")
+            print(f"[VERBOSE] Old version: {current_version}, New version: {new_version}")
+            # Покажем подзаголовки
+            import re
+            def get_subheaders(text):
+                return [(l, h.strip()) for l, h in re.findall(r'^(#{2,6})\s+(.+)$', text, re.MULTILINE)]
+            print(f"[VERBOSE] Old subheaders: {get_subheaders(old_content)}")
+            print(f"[VERBOSE] New subheaders: {get_subheaders(content_without_metadata)}")
+        metadata['version'] = new_version
 
     # Format the metadata block
     formatted_metadata = format_metadata(metadata)
@@ -639,130 +658,126 @@ def process_file(
             return False
 
         original_content = content
-
-        # Extract metadata if it exists
         content_without_metadata, current_metadata = extract_metadata(content)
 
-        # If we're just removing metadata, do that and return
         if remove:
             if not current_metadata:
                 if verbose:
                     print(f"No metadata found in {filepath}")
                 return False
-
             new_content = content_without_metadata
             action = "Removed metadata from"
-        else:
-            # Prepare new metadata
-            if new_metadata is None:
-                new_metadata = {}
-
-            # Auto-determine author if enabled and not explicitly set
-            if auto_author and 'author' not in new_metadata:
-                author_info = get_author_info(filepath, verbose)
-                new_metadata['author'] = author_info['author']
-
-                if verbose:
-                    print(f"Auto-detected author for {filepath}: {author_info['author']}")
-                    if 'git_contributors' in author_info and author_info['git_contributors']:
-                        print(f"  All contributors: {', '.join(author_info['git_contributors'][:5])}")
-
-            if current_metadata and not overwrite:
-                metadata = {**current_metadata, **new_metadata}
-            else:
-                metadata = {**DEFAULT_METADATA, **new_metadata}
-
-            # Get current document fingerprint
-            current_fingerprint = get_document_fingerprint(content_without_metadata)
-
-            # Get previous fingerprint from metadata if it exists
-            previous_fingerprint = {}
-            if current_metadata and '_fingerprint' in current_metadata:
-                try:
-                    previous_fingerprint = json.loads(current_metadata['_fingerprint'])
-                except (json.JSONDecodeError, TypeError):
-                    previous_fingerprint = {}
-
-            # Update timestamps
-            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            if 'created_at' not in metadata or not metadata['created_at']:
-                metadata['created_at'] = now
-
-            # Check if there are actual content changes
-            if (previous_fingerprint and
-                previous_fingerprint.get('content_hash') == current_fingerprint['content_hash']):
-                if verbose:
-                    print(f"No content changes detected in {filepath}")
-                # Still update metadata if author or other fields changed
-                if current_metadata == metadata:
-                    return False
-
-            # Update version based on change type
-            if previous_fingerprint and previous_fingerprint.get('content_hash') != current_fingerprint['content_hash']:
-                current_version = metadata.get('version', '0.0.0')
-
-                # Check for major changes (changes to main headers #)
-                old_headers_data = previous_fingerprint.get('headers', '[]')
-                try:
-                    old_headers_list = json.loads(old_headers_data) if isinstance(old_headers_data, str) else old_headers_data
-                    old_headers = set(old_headers_list) if isinstance(old_headers_list, list) else set()
-                except (json.JSONDecodeError, TypeError):
-                    old_headers = set()
-
-                new_headers = extract_headers(content_without_metadata)
-                old_main_headers = {h for h in old_headers if h.startswith('1:')}
-                new_main_headers = {h for h in new_headers if h.startswith('1:')}
-
-                if old_main_headers != new_main_headers:
-                    # Major version bump for changes in main headers
-                    metadata['version'] = increment_version(current_version, 'major')
-                    if verbose:
-                        print(f"Major changes detected, updating version to {metadata['version']}")
-                # Check for medium changes (changes to sub-headers ##, ###, etc.)
-                elif previous_fingerprint.get('headers_hash') != current_fingerprint['headers_hash']:
-                    # Medium version bump for changes to sub-headers
-                    metadata['version'] = increment_version(current_version, 'medium')
-                    if verbose:
-                        print(f"Medium changes detected, updating version to {metadata['version']}")
-                # Otherwise, minor version bump for content changes
-                else:
-                    metadata['version'] = increment_version(current_version, 'minor')
-                    if verbose:
-                        print(f"Minor changes detected, updating version to {metadata['version']}")
-
-                # Update the fingerprint with the current headers for next time
-                current_fingerprint['headers'] = json.dumps(list(new_headers))
-
-            # Update the fingerprint and timestamp
-            metadata['_fingerprint'] = json.dumps(current_fingerprint)
-            metadata['updated_at'] = now
-
-            # Format the new metadata block
-            formatted_metadata = format_metadata(metadata)
-            metadata_block = f"""
-<!-- METADATA
-{formatted_metadata}
--->
-""".strip()
-
-            # Create the new content
-            new_content = content_without_metadata.rstrip() + '\n\n' + metadata_block + '\n'
-            # If the content hasn't changed, don't update the file
-            if new_content.strip() == original_content.strip():
-                if verbose:
-                    print(f"No changes to {filepath}")
-                return False
-
-            action = "Updated metadata in"
-
-        # Write the changes if not in dry run mode
-        if not dry_run:
+            if dry_run:
+                print(f"[DRY-RUN] Would remove metadata block from {filepath}")
+                if current_metadata:
+                    print("--- Old metadata block ---")
+                    print(json.dumps(current_metadata, indent=2, ensure_ascii=False))
+                    print("--------------------------")
+                return True
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(new_content)
+            print(f"{action} {filepath}")
+            return True
 
+        # --- основной блок добавления/обновления метаданных ---
+        if new_metadata is None:
+            new_metadata = {}
+
+        if auto_author and 'author' not in new_metadata:
+            author_info = get_author_info(filepath, verbose)
+            new_metadata['author'] = author_info['author']
+            if verbose:
+                print(f"Auto-detected author for {filepath}: {author_info['author']}")
+                if 'git_contributors' in author_info and author_info['git_contributors']:
+                    print(f"  All contributors: {', '.join(author_info['git_contributors'][:5])}")
+
+        if current_metadata and not overwrite:
+            metadata = {**current_metadata, **new_metadata}
+        else:
+            metadata = {**DEFAULT_METADATA, **new_metadata}
+
+        current_fingerprint = get_document_fingerprint(content_without_metadata)
+        previous_fingerprint = {}
+        if current_metadata and '_fingerprint' in current_metadata:
+            try:
+                previous_fingerprint = json.loads(current_metadata['_fingerprint'])
+            except (json.JSONDecodeError, TypeError):
+                previous_fingerprint = {}
+
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        if 'created_at' not in metadata or not metadata['created_at']:
+            metadata['created_at'] = now
+
+        if (previous_fingerprint and previous_fingerprint.get('content_hash') == current_fingerprint['content_hash']):
+            if verbose:
+                print(f"No content changes detected in {filepath}")
+            if current_metadata == metadata:
+                return False
+
+        if previous_fingerprint and previous_fingerprint.get('content_hash') != current_fingerprint['content_hash']:
+            current_version = metadata.get('version', '0.0.0')
+            old_headers_data = previous_fingerprint.get('headers', '[]')
+            try:
+                old_headers_list = json.loads(old_headers_data) if isinstance(old_headers_data, str) else old_headers_data
+                old_headers = set(old_headers_list) if isinstance(old_headers_list, list) else set()
+            except (json.JSONDecodeError, TypeError):
+                old_headers = set()
+            new_headers = extract_headers(content_without_metadata)
+            old_main_headers = {h for h in old_headers if h.startswith('1:')}
+            new_main_headers = {h for h in new_headers if h.startswith('1:')}
+            if old_main_headers != new_main_headers:
+                metadata['version'] = increment_version(current_version, 'major')
+                if verbose:
+                    print(f"Major changes detected, updating version to {metadata['version']}")
+            elif previous_fingerprint.get('headers_hash') != current_fingerprint['headers_hash']:
+                metadata['version'] = increment_version(current_version, 'medium')
+                if verbose:
+                    print(f"Medium changes detected, updating version to {metadata['version']}")
+            else:
+                metadata['version'] = increment_version(current_version, 'minor')
+                if verbose:
+                    print(f"Minor changes detected, updating version to {metadata['version']}")
+            current_fingerprint['headers'] = json.dumps(list(new_headers))
+
+        metadata['_fingerprint'] = json.dumps(current_fingerprint)
+        metadata['updated_at'] = now
+        formatted_metadata = format_metadata(metadata)
+        metadata_block = f"<!-- METADATA\n{formatted_metadata}\n-->"
+        new_content = content_without_metadata.rstrip() + '\n\n' + metadata_block + '\n'
+
+        # Check if metadata actually changed
+        if current_metadata:
+            # Compare metadata excluding updated_at field for change detection
+            old_meta_for_comparison = {k: v for k, v in current_metadata.items() if k != 'updated_at'}
+            new_meta_for_comparison = {k: v for k, v in metadata.items() if k != 'updated_at'}
+            if old_meta_for_comparison == new_meta_for_comparison:
+                if verbose:
+                    print(f"No metadata changes to {filepath}")
+                return False
+        elif not new_metadata:
+            # No existing metadata and no new metadata to add
+            if verbose:
+                print(f"No changes to {filepath}")
+            return False
+        action = "Updated metadata in"
+        if dry_run:
+            if not current_metadata:
+                print(f"[DRY-RUN] Would add metadata block to {filepath}")
+                print("--- New metadata block ---")
+                print(metadata_block)
+                print("--------------------------")
+            else:
+                print(f"[DRY-RUN] Would update metadata block in {filepath}")
+                print("--- Old metadata block ---")
+                print(json.dumps(current_metadata, indent=2, ensure_ascii=False))
+                print("--- New metadata block ---")
+                print(metadata_block)
+                print("--------------------------")
+            return True
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(new_content)
         print(f"{action} {filepath}")
         return True
-
     except Exception as e:
         print(f"Error processing {filepath}: {str(e)}")
         if verbose:
@@ -782,25 +797,7 @@ def process_bulk(
     ignore_patterns: Optional[List[str]] = None,
     include_root: bool = True,
     ignore_file: Optional[str] = None
-) -> Tuple[int, int]:
-    """
-    Process all markdown files in a directory tree.
-
-    Args:
-        root_dir: Root directory to search
-        new_metadata: Dictionary of new metadata to add/update
-        remove: Whether to remove metadata
-        overwrite: Whether to overwrite existing metadata
-        dry_run: Whether to perform a dry run
-        auto_author: Whether to automatically determine author
-        verbose: Whether to show verbose output
-        ignore_patterns: Custom ignore patterns
-        include_root: Whether to include files in root directory
-        ignore_file: Path to ignore file
-
-    Returns:
-        Tuple of (total_files, modified_files)
-    """
+    ) -> Tuple[int, int]:
     # Load ignore patterns
     if ignore_patterns is None:
         ignore_patterns = load_ignore_patterns(ignore_file)
@@ -923,7 +920,9 @@ def main():
 
     args = parser.parse_args()
 
+
     # Validate arguments
+    markdown_files = []
     if args.bulk is not None and not args.files:
         # Bulk processing mode
         root_dir = args.bulk if args.bulk else "."
@@ -935,13 +934,14 @@ def main():
             ignore_patterns.extend(args.ignore)
 
         # List files mode
-        if args.list_files:
+        if args.list_files or args.show_info:
             markdown_files = find_markdown_files(
                 root_dir,
                 ignore_patterns or load_ignore_patterns(args.ignore_file),
                 not args.exclude_root,
                 args.verbose
             )
+        if args.list_files:
             print(f"Found {len(markdown_files)} markdown files:")
             for filepath in sorted(markdown_files):
                 print(f"  {filepath}")
@@ -949,13 +949,6 @@ def main():
 
         # Show info mode
         if args.show_info:
-            markdown_files = find_markdown_files(
-                root_dir,
-                ignore_patterns or load_ignore_patterns(args.ignore_file),
-                not args.exclude_root,
-                args.verbose
-            )
-
             print(f"Author information for {len(markdown_files)} markdown files:\n")
             for filepath in sorted(markdown_files):
                 try:
@@ -966,9 +959,10 @@ def main():
                     if args.verbose:
                         if 'git_last_author' in author_info and author_info['git_last_author']:
                             print(f"  Git last author: {author_info['git_last_author']}")
-                        if 'git_contributors' in author_info and author_info['git_contributors']:
-                            contributors = author_info['git_contributors'][:3]  # Show first 3
-                            print(f"  Git contributors: {', '.join(contributors)}")
+                        if 'git_contributors' in author_info:
+                            contributors = author_info['git_contributors'][:3] if author_info['git_contributors'] else []
+                            if contributors:
+                                print(f"  Git contributors: {', '.join(contributors)}")
                         if 'system_author' in author_info:
                             print(f"  System author: {author_info['system_author']}")
                         if 'file_owner' in author_info and author_info['file_owner']:
@@ -1048,13 +1042,7 @@ if __name__ == '__main__':
 
 # Дополнительная функция для более гибкого управления игнорированием файлов
 def create_ignore_file(filepath: str = ".mdignore", patterns: List[str] = None) -> None:
-    """
-    Create a custom ignore file for markdown processing.
-
-    Args:
-        filepath: Path to the ignore file to create
-        patterns: List of patterns to include (uses defaults if None)
-    """
+    # Create a custom ignore file for markdown processing.
     if patterns is None:
         patterns = DEFAULT_IGNORE_PATTERNS.copy()
         patterns.extend([
@@ -1084,16 +1072,7 @@ def create_ignore_file(filepath: str = ".mdignore", patterns: List[str] = None) 
 
 # Функция для проверки статуса обработки проекта
 def get_project_status(root_dir: str = ".", ignore_file: str = None) -> Dict:
-    """
-    Get comprehensive status of markdown files in the project.
-
-    Args:
-        root_dir: Root directory to analyze
-        ignore_file: Path to ignore file
-
-    Returns:
-        Dictionary with project status information
-    """
+    # Get comprehensive status of markdown files in the project.
     ignore_patterns = load_ignore_patterns(ignore_file)
     markdown_files = find_markdown_files(root_dir, ignore_patterns, True, False)
 
@@ -1116,9 +1095,9 @@ def get_project_status(root_dir: str = ".", ignore_file: str = None) -> Dict:
             if metadata:
                 status['files_with_metadata'] += 1
 
-                # Collect author info
-                author = metadata.get('author', 'Unknown')
-                if author and author != 'Unknown':
+                # Track authors
+                author = metadata.get('author', '')
+                if author:
                     status['authors'].add(author)
                     if author not in status['files_by_author']:
                         status['files_by_author'][author] = []
@@ -1126,14 +1105,15 @@ def get_project_status(root_dir: str = ".", ignore_file: str = None) -> Dict:
                 else:
                     status['files_without_author'].append(filepath)
 
-                # Collect version info
-                version = metadata.get('version', '0.0.0')
-                if version not in status['versions']:
-                    status['versions'][version] = 0
-                status['versions'][version] += 1
+                # Track versions
+                version = metadata.get('version', '')
+                if version:
+                    if version not in status['versions']:
+                        status['versions'][version] = 0
+                    status['versions'][version] += 1
 
-                # Track latest update
-                updated_at = metadata.get('updated_at')
+                # Track last updated
+                updated_at = metadata.get('updated_at', '')
                 if updated_at:
                     if not status['last_updated'] or updated_at > status['last_updated']:
                         status['last_updated'] = updated_at
@@ -1152,32 +1132,28 @@ def get_project_status(root_dir: str = ".", ignore_file: str = None) -> Dict:
 
 # Функция для создания отчета о состоянии проекта
 def generate_project_report(root_dir: str = ".", output_file: str = None) -> str:
-    """
-    Generate a comprehensive report about the project's markdown files.
-
-    Args:
-        root_dir: Root directory to analyze
-        output_file: Optional file to save the report
-
-    Returns:
-        Report content as string
-    """
+    # Generate a comprehensive report about the project's markdown files.
     status = get_project_status(root_dir)
 
-    report = f"""# Markdown Files Metadata Report
-
-Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-Project directory: {os.path.abspath(root_dir)}
-
-## Summary
-- Total markdown files: {status['total_files']}
-- Files with metadata: {status['files_with_metadata']}
-- Files without metadata: {status['files_without_metadata']}
-- Coverage: {(status['files_with_metadata'] / status['total_files'] * 100):.1f}%
-
-## Authors
-Total authors: {len(status['authors'])}
-"""
+    if status['total_files']:
+        coverage = (status['files_with_metadata'] / status['total_files']) * 100
+    else:
+        coverage = 0.0
+    report = (
+        f"# Markdown Files Metadata Report\n"
+        f"\n"
+        f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        f"Project directory: {os.path.abspath(root_dir)}\n"
+        f"\n"
+        f"## Summary\n"
+        f"- Total markdown files: {status['total_files']}\n"
+        f"- Files with metadata: {status['files_with_metadata']}\n"
+        f"- Files without metadata: {status['files_without_metadata']}\n"
+        f"- Coverage: {coverage:.1f}%\n"
+        f"\n"
+        f"## Authors\n"
+        f"Total authors: {len(status['authors'])}\n"
+    )
 
     if status['authors']:
         for author in sorted(status['authors']):

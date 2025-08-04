@@ -43,6 +43,11 @@ from .core import (
     # Processing functions
     process_file,
     process_bulk,
+
+    # Report and utility functions
+    create_ignore_file,
+    get_project_status,
+    generate_project_report,
 )
 
 # Import CLI if needed

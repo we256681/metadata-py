@@ -1,307 +1,254 @@
-# metadata-py: Утилита для управления метаданными в markdown-файлах
+# metadata-py
 
-[![PyPI version](https://img.shields.io/pypi/v/metadata-py.svg)](https://pypi.org/project/metadata-py/)
-[![License](https://img.shields.io/github/license/woodg9461/metadata-py)](https://github.com/woodg9461/metadata-py/blob/master/LICENSE)
-
-## Описание
-
-metadata-py — это мощная утилита для управления блоками метаданных в markdown-файлах. Она предоставляет автоматический контроль версий, определение автора и массовую обработку файлов. Разработана для работы с документацией и поддерживает семантическое версионирование.
+**metadata-py** — это CLI-утилита для автоматического управления блоками метаданных в markdown-файлах. Она позволяет добавлять, обновлять и удалять метаданные, автоматически определять автора, вести контроль версий по семантическим правилам и массово обрабатывать файлы с учётом игнорирования по паттернам.
 
 ## Основные возможности
 
-1. **Управление метаданными**
-   - Добавление, обновление и удаление блоков метаданных
-   - Автоматический контроль версий с использованием семантического версионирования
-   - Обнаружение изменений и автоматическое обновление версий
-   - Поддержка пользовательских полей метаданных
-   - Хранение цифрового отпечатка документа для проверки целостности
-
-2. **Определение автора** (в порядке приоритета):
-   - История коммитов Git для конкретного файла
-   - Настройки репозитория Git
-   - Переменные окружения системы
-   - Владелец файла в файловой системе
-
-3. **Массовая обработка**
-   - Обработка всех markdown-файлов в директории
-   - Игнорирование ненужных файлов и директорий
-   - Поддержка пользовательских паттернов игнорирования
-   - Генерация отчетов о состоянии проекта
-
-4. **Управление игнор-файлами**
-   - Автоматическое создание и обновление файлов игнорирования
-   - Поддержка формата .gitignore
-   - Использование системных и пользовательских паттернов игнорирования
-
-## Методы определения автора
-
-metadata-py использует несколько методов для определения автора файла в порядке приоритета:
-
-1. История коммитов Git для конкретного файла
-2. Настройки репозитория Git
-3. Переменные окружения системы
-4. Владелец файла в файловой системе
-
-Вы можете отключить автоматическое определение автора с помощью флага `--no-auto-author`.
-
-## Управление версиями
-
-metadata-py поддерживает автоматическое семантическое версионирование:
-
-- **Мажорная версия (X.0.0)**: Изменения в заголовках первого уровня (`#`)
-- **Средняя версия (0.X.0)**: Изменения в подзаголовках (`##`, `###` и т.д.)
-- **Минорная версия (0.0.X)**: Изменения в содержимом без изменения заголовков
-
-Версия автоматически обновляется при обнаружении изменений в документе.
+- **Автоматическое управление метаданными**: Добавление, обновление и удаление блоков метаданных в markdown-файлах
+- **Семантическое версионирование**: Автоматическое увеличение версий на основе типа изменений (major/minor/patch)
+- **Автоматическое определение автора**: Умное определение автора из Git, переменных окружения или системной информации
+- **Массовая обработка**: Обработка всех markdown-файлов в директории с поддержкой паттернов игнорирования
+- **Отчёты**: Генерация подробных отчётов о состоянии метаданных в проекте
+- **Dry-run режим**: Предварительный просмотр изменений без их применения
 
 ## Установка
 
 ```bash
 pip install metadata-py
 ```
-## metadata-py --help
-usage: metadata-py [-h] {update,report,init-mdignore} ...
 
-Manage metadata in markdown files.
-
-positional arguments:
-  {update,report,init-mdignore}
-                        Command to execute
-    update              Update metadata in markdown files
-    report              Generate a report about markdown files
-    init-mdignore       Create a default .mdignore file
-
-options:
-  -h, --help            show this help message and exit
-
-Examples:
-```Bash
-  # Add/update metadata in all markdown files in the current directory
-  metadata-py update --set author="John Doe" --set version=1.0.0
-
-  # Remove metadata from a specific file
-  metadata-py update --remove test.md
-
-  # Process all markdown files except those in the docs/ directory
-  metadata-py update --ignore "docs/*" --set author="John Doe"
-
-  # Create a report about markdown files in the project
-  metadata-py report
-
-  # Create a default .mdignore file
-  metadata-py init-mdignore
-```
-
-## metadata-py update --help
-- usage: metadata-py update
-   - [-h]
-   - [--verbose]
-   - [--set KEY=VALUE]
-   - [--remove]
-   - [--overwrite]
-   - [--dry-run]
-   - [--ignore IGNORE]
-   - [--ignore-file IGNORE_FILE]
-   - [--exclude-root]
-   - [--no-auto-author]
-   - [--yes]
-   - [files ...]
-
-- positional arguments:
-   - files                 Markdown files to process (default: all in current directory)
-
-- options:
-   -  -h, --help            show this help message and exit
-   -  --verbose, -v         Show verbose output including author detection details
-   -  --set KEY=VALUE, -s KEY=VALUE
-                        Set metadata key-value pairs (can be used multiple times)
-   -  --remove, -r          Remove metadata from files
-   -  --overwrite, -o       Completely overwrite existing metadata instead of updating
-   -  --dry-run, -n         Show what would be done without making changes
-   -  --ignore IGNORE, -i IGNORE
-                        Patterns to ignore (can be used multiple times)
-   -  --ignore-file IGNORE_FILE
-                        Path to ignore file (default: .gitignore if exists)
-   -  --exclude-root        Exclude files in the root directory when bulk processing
-   -  --no-auto-author      Disable automatic author detection
-   -  --yes, -y             Skip confirmation prompts
-
-## Использование
+## Быстрый старт
 
 ```bash
-# Обработка всех markdown-файлов в текущей директории и поддиректориях с автоматическим определением автора и версией:
-metadata-py update --set "" .
-# или просто:
-metadata-py update .
-# (если не указаны --set, автор и версия будут определены автоматически)
+# Обработка всех markdown-файлов в текущей директории
+metadata-py update
+
+# Обработка конкретного файла
+metadata-py update README.md
+
+# Предварительный просмотр изменений
+metadata-py update --dry-run
+
+# Генерация отчёта
+metadata-py report
 ```
 
-## Основные команды
+## Команды
 
-### Обновление метаданных
+### update
+
+Обновление метаданных в markdown-файлах.
 
 ```bash
-# Обновить метаданные в конкретном файле
-metadata-py update README.md --set author="Имя Фамилия" --set version="1.0.0"
+# Базовое использование
+metadata-py update [файлы...]
 
-# Обновить метаданные во всех markdown-файлах в текущей директории
-metadata-py update --set author="Имя Фамилия" --set version="1.0.0" .
+# Опции
+--verbose, -v         # Подробный вывод
+--set KEY=VALUE       # Установка значений метаданных
+--remove, -r          # Удаление метаданных
+--overwrite, -o       # Полная перезапись метаданных
+--dry-run, -n         # Предварительный просмотр
+--ignore PATTERN      # Игнорирование по паттерну
+--ignore-file FILE    # Файл с паттернами игнорирования
+--exclude-root        # Исключить файлы из корня
+--no-auto-author      # Отключить автоопределение автора
+--yes, -y             # Пропустить подтверждения
+```
+
+**Примеры:**
+
+```bash
+# Обновить все файлы с автоопределением автора
+metadata-py update
+
+# Установить конкретного автора и версию
+metadata-py update --set author="John Doe" --set version="2.0.0"
 
 # Удалить метаданные из файла
-metadata-py update README.md --remove
+metadata-py update --remove README.md
 
-# Предпросмотр изменений без сохранения
-metadata-py update --dry-run --set version="1.0.1" .
-
-# Игнорировать определенные файлы или директории
-metadata-py update --set author="Имя Фамилия" --ignore "drafts/*" --ignore "*.draft.md" .
-
-# Исключить файлы в корневой директории
-metadata-py update --exclude-root --set version="1.0.0" .
-
-# Отключить автоматическое определение автора
-metadata-py update --no-auto-author --set author="Имя Фамилия" .
+# Игнорировать определённые файлы
+metadata-py update --ignore "drafts/*" --ignore "*.draft.md"
 ```
 
-### Отчеты
+### report
+
+Генерация отчёта о состоянии метаданных в проекте.
 
 ```bash
-# Показать отчет по всем markdown-файлам
 metadata-py report
-
-# Подробный отчет с дополнительной информацией
-metadata-py report --verbose
 ```
 
-### Игнорирование файлов
+**Пример вывода:**
+
+```
+# Markdown Files Metadata Report
+
+Generated on: 2025-08-04 07:45:17
+Project directory: /path/to/project
+
+## Summary
+- Total markdown files: 7
+- Files with metadata: 7
+- Files without metadata: 0
+- Coverage: 100.0%
+
+## Authors
+Total authors: 3
+- John Doe: 4 files
+- Jane Smith: 2 files
+- Bot User: 1 files
+
+## Version Distribution
+- v1.0.0: 5 files
+- v2.0.0: 2 files
+```
+
+### init-mdignore
+
+Создание файла `.mdignore` с настройками по умолчанию.
 
 ```bash
-# Создать файл .mdignore с настройками по умолчанию
-metadata-py init-mdignore
-
-# Использовать собственный файл игнорирования
-metadata-py update --ignore-file .myignore --set version="1.0.0" .
-```
-### Обновление версии через консоль
-
-```Bash
-# Build the package
-python -m build
-
-# Add the changed files
-git add .
-
-# Create a commit with a descriptive message
-git commit -m "Bump version to 1.0.7 and update workflow"
-
-# Create a new tag for version 1.0.7
-git tag -a v1.0.7 -m "Version 1.0.7"
-
-# Push the tag to trigger the workflow
-git push origin v1.0.7
+metadata-py init-mdignore [--force]
 ```
 
-## Полезные опции
+## Семантическое версионирование
 
-- `--verbose, -v`: Подробный вывод (включая информацию об определении автора)
-- `--yes, -y`: Пропустить подтверждение
-- `--overwrite, -o`: Полностью перезаписать существующие метаданные
-- `--ignore, -i`: Шаблоны для игнорирования (можно использовать несколько раз)
-- `--ignore-file`: Указать файл с правилами игнорирования (по умолчанию: .gitignore)
-- `--exclude-root`: Исключить файлы в корневой директории
+Система автоматически определяет тип изменений и увеличивает версию:
 
-# Добавление паттернов игнорирования
-metadata-py --bulk . --ignore "*.draft.md" --ignore "temp/*"
+- **Major версия (X.0.0)**: Изменения заголовков первого уровня (`# Заголовок`)
+- **Minor версия (0.X.0)**: Изменения подзаголовков (`## Подзаголовок`, `### Подзаголовок`)
+- **Patch версия (0.0.X)**: Изменения содержимого без изменения структуры заголовков
 
-# Для предварительного просмотра изменений без их применения
-metadata-py --bulk . --dry-run --verbose
+## Автоматическое определение автора
 
-# Создание файла игнорирования
-python3 scripts/metadata_new.py --create-ignore .mdignore
-```
+Скрипт определяет автора в следующем порядке приоритета:
+
+1. **Git информация**:
+   - Автор последнего коммита для конкретного файла
+   - Настройки Git репозитория (`user.name` и `user.email`)
+
+2. **Переменные окружения**:
+   - `AUTHOR_NAME`
+   - `GIT_AUTHOR_NAME`
+   - `USER`
+   - `USERNAME`
+
+3. **Системная информация**:
+   - Владелец файла в файловой системе
+   - Текущий пользователь системы
 
 ## Формат метаданных
 
-```markdown
+Метаданные добавляются в конец markdown-файла в виде HTML-комментария:
 
+```markdown
+<!-- METADATA
+{
+  "created_at": "2025-08-04 04:09:00",
+  "updated_at": "2025-08-04 07:21:12",
+  "author": "John Doe <john@example.com>",
+  "version": "1.1.0",
+  "_fingerprint": "{\"content_hash\": \"...\", \"headers_hash\": \"...\"}"
+}
+-->
 ```
 
-## Зависимости
+### Поля метаданных
+
+- **created_at**: Дата и время создания метаданных
+- **updated_at**: Дата и время последнего обновления
+- **author**: Автор файла
+- **version**: Версия документа (семантическое версионирование)
+- **_fingerprint**: Цифровой отпечаток для отслеживания изменений
+
+## Игнорирование файлов
+
+Создайте файл `.mdignore` для исключения файлов из обработки:
+
+```
+# Комментарии начинаются с #
+*.draft.md
+drafts/
+temp/
+node_modules/
+```
+
+Поддерживаются glob-паттерны:
+
+- `*` — любые символы
+- `?` — один символ
+- `**` — рекурсивный поиск в поддиректориях
+
+## Интеграция в процессы
+
+### CI/CD
+
+```yaml
+# .github/workflows/docs.yml
+name: Update Documentation Metadata
+
+on:
+  push:
+    paths:
+      - '**/*.md'
+
+jobs:
+  update-metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Install metadata-py
+        run: pip install metadata-py
+      - name: Update metadata
+        run: metadata-py update --yes
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git diff --staged --quiet || git commit -m "Update documentation metadata"
+          git push
+```
+
+### Pre-commit Hook
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: local
+    hooks:
+      - id: metadata-py
+        name: Update markdown metadata
+        entry: metadata-py update --yes
+        language: system
+        files: \.md$
+```
+
+## Требования
 
 - Python 3.6+
-- Модуль `packaging` (для сравнения версий)
-- Git (для определения автора)
-- Python модули для работы с файловой системой
-- Python модули для работы с регулярными выражениями
+- Стандартные библиотеки Python
 
-## Обработка ошибок
+## Лицензия
 
-Скрипт включает всестороннюю обработку ошибок для:
-- Операций с файлами
-- Операций с Git
-- Парсинга JSON
-- Анализа строк версий
-- Операций с игнор-файлами
-- Массовой обработки файлов
-- Генерации отчетов
-- `AUTHOR_NAME` и `AUTHOR_EMAIL`
-- `USER_NAME` и `USER_EMAIL`
+MIT License
 
-### 3. Системная информация:
-- Текущий пользователь системы: `getpass.getuser()`
-- Владелец файла: `pwd.getpwuid(stat_info.st_uid).pw_name`
-- Проверка существования файлов и директорий
-- Проверка прав доступа к файлам
+## Поддержка
 
-## Параметры командной строки
+Для сообщения об ошибках и предложений используйте [GitHub Issues](https://github.com/your-repo/metadata-py/issues).
 
-```bash
-# Обработка конкретных файлов (можно указать несколько)
-python3 scripts/metadata_new.py file1.md file2.md
-
-# Режим массовой обработки (можно указать директорию)
-python3 scripts/metadata_new.py --bulk .
-
-# Установка метаданных (можно использовать несколько раз)
-python3 scripts/metadata_new.py file.md --set author="Имя Фамилия" --set version="1.0.0"
-
-# Удаление блока метаданных
-python3 scripts/metadata_new.py file.md --remove
-
-# Полная перезапись существующих метаданных
-python3 scripts/metadata_new.py file.md --overwrite
-
-# Пробный запуск (предпросмотр изменений)
-python3 scripts/metadata_new.py file.md --dry-run
-
-# Отключение автоматического определения автора
-python3 scripts/metadata_new.py file.md --no-auto-author
-
-# Подробный вывод
-python3 scripts/metadata_new.py file.md --verbose
-
-# Игнорирование файлов (можно использовать несколько раз)
-python3 scripts/metadata_new.py --bulk . --ignore "*.draft.md" --ignore "temp/*"
-
-# Использование файла игнорирования
-python3 scripts/metadata_new.py --bulk . --ignore-file ".mdignore"
-
-# Исключение корневых файлов при массовой обработке
-python3 scripts/metadata_new.py --bulk . --exclude-root
-
-# Показ информации об авторах
-python3 scripts/metadata_new.py --bulk . --show-info
-
-# Показ списка файлов для обработки
-python3 scripts/metadata_new.py --bulk . --list-files
-```
-
-## Особенности:
-
-1. **Умное определение**: Скрипт сначала проверяет Git, затем переменные окружения, потом системную информацию
-2. **Безопасность**: Все Git команды выполняются с таймаутом для избежания зависания
-3. **Fallback**: Если один метод не работает, используется следующий
-4. **Совместимость**: Работает как в Git репозиториях, так и вне их
-5. **Гибкость**: Можно отключить автоопределение или переопределить автора вручную
-
-Теперь скрипт автоматически определит автора на основе доступной информации из Git, IDE настроек или системы!
+<!-- METADATA
+{
+  "created_at": "2025-08-04 04:09:00",
+  "updated_at": "2025-08-04 07:50:08",
+  "author": "woodg9461 <woodg9461@gmail.com>",
+  "version": "2.0.0",
+  "_fingerprint": "{\"content_hash\": \"272f7cbca455ec287c0dc5a24cfd465232d1275ec1c73e0e5888c0b7770a6166\", \"headers_hash\": \"f2037a39999cfaa1d972c6939c22ae1dfb2327b8f683838b6e89ff2f0643f765\", \"headers\": \"[\\\"2:\\\\u0418\\\\u0433\\\\u043d\\\\u043e\\\\u0440\\\\u0438\\\\u0440\\\\u043e\\\\u0432\\\\u0430\\\\u043d\\\\u0438\\\\u0435 \\\\u0444\\\\u0430\\\\u0439\\\\u043b\\\\u043e\\\\u0432\\\", \\\"2:Authors\\\", \\\"1:\\\\u041e\\\\u0431\\\\u0440\\\\u0430\\\\u0431\\\\u043e\\\\u0442\\\\u043a\\\\u0430 \\\\u0432\\\\u0441\\\\u0435\\\\u0445 markdown-\\\\u0444\\\\u0430\\\\u0439\\\\u043b\\\\u043e\\\\u0432 \\\\u0432 \\\\u0442\\\\u0435\\\\u043a\\\\u0443\\\\u0449\\\\u0435\\\\u0439 \\\\u0434\\\\u0438\\\\u0440\\\\u0435\\\\u043a\\\\u0442\\\\u043e\\\\u0440\\\\u0438\\\\u0438\\\", \\\"3:init-mdignore\\\", \\\"2:\\\\u041f\\\\u043e\\\\u0434\\\\u0434\\\\u0435\\\\u0440\\\\u0436\\\\u043a\\\\u0430\\\", \\\"1:\\\\u0423\\\\u0434\\\\u0430\\\\u043b\\\\u0438\\\\u0442\\\\u044c \\\\u043c\\\\u0435\\\\u0442\\\\u0430\\\\u0434\\\\u0430\\\\u043d\\\\u043d\\\\u044b\\\\u0435 \\\\u0438\\\\u0437 \\\\u0444\\\\u0430\\\\u0439\\\\u043b\\\\u0430\\\", \\\"1:\\\\u041a\\\\u043e\\\\u043c\\\\u043c\\\\u0435\\\\u043d\\\\u0442\\\\u0430\\\\u0440\\\\u0438\\\\u0438 \\\\u043d\\\\u0430\\\\u0447\\\\u0438\\\\u043d\\\\u0430\\\\u044e\\\\u0442\\\\u0441\\\\u044f \\\\u0441 #\\\", \\\"2:\\\\u0410\\\\u0432\\\\u0442\\\\u043e\\\\u043c\\\\u0430\\\\u0442\\\\u0438\\\\u0447\\\\u0435\\\\u0441\\\\u043a\\\\u043e\\\\u0435 \\\\u043e\\\\u043f\\\\u0440\\\\u0435\\\\u0434\\\\u0435\\\\u043b\\\\u0435\\\\u043d\\\\u0438\\\\u0435 \\\\u0430\\\\u0432\\\\u0442\\\\u043e\\\\u0440\\\\u0430\\\", \\\"2:\\\\u0411\\\\u044b\\\\u0441\\\\u0442\\\\u0440\\\\u044b\\\\u0439 \\\\u0441\\\\u0442\\\\u0430\\\\u0440\\\\u0442\\\", \\\"1:\\\\u041e\\\\u0431\\\\u043d\\\\u043e\\\\u0432\\\\u0438\\\\u0442\\\\u044c \\\\u0432\\\\u0441\\\\u0435 \\\\u0444\\\\u0430\\\\u0439\\\\u043b\\\\u044b \\\\u0441 \\\\u0430\\\\u0432\\\\u0442\\\\u043e\\\\u043e\\\\u043f\\\\u0440\\\\u0435\\\\u0434\\\\u0435\\\\u043b\\\\u0435\\\\u043d\\\\u0438\\\\u0435\\\\u043c \\\\u0430\\\\u0432\\\\u0442\\\\u043e\\\\u0440\\\\u0430\\\", \\\"2:\\\\u041b\\\\u0438\\\\u0446\\\\u0435\\\\u043d\\\\u0437\\\\u0438\\\\u044f\\\", \\\"1:\\\\u041e\\\\u0431\\\\u0440\\\\u0430\\\\u0431\\\\u043e\\\\u0442\\\\u043a\\\\u0430 \\\\u043a\\\\u043e\\\\u043d\\\\u043a\\\\u0440\\\\u0435\\\\u0442\\\\u043d\\\\u043e\\\\u0433\\\\u043e \\\\u0444\\\\u0430\\\\u0439\\\\u043b\\\\u0430\\\", \\\"2:\\\\u0421\\\\u0435\\\\u043c\\\\u0430\\\\u043d\\\\u0442\\\\u0438\\\\u0447\\\\u0435\\\\u0441\\\\u043a\\\\u043e\\\\u0435 \\\\u0432\\\\u0435\\\\u0440\\\\u0441\\\\u0438\\\\u043e\\\\u043d\\\\u0438\\\\u0440\\\\u043e\\\\u0432\\\\u0430\\\\u043d\\\\u0438\\\\u0435\\\", \\\"3:Pre-commit Hook\\\", \\\"2:\\\\u041e\\\\u0441\\\\u043d\\\\u043e\\\\u0432\\\\u043d\\\\u044b\\\\u0435 \\\\u0432\\\\u043e\\\\u0437\\\\u043c\\\\u043e\\\\u0436\\\\u043d\\\\u043e\\\\u0441\\\\u0442\\\\u0438\\\", \\\"1:.github/workflows/docs.yml\\\", \\\"1:\\\\u041e\\\\u043f\\\\u0446\\\\u0438\\\\u0438\\\", \\\"2:\\\\u0418\\\\u043d\\\\u0442\\\\u0435\\\\u0433\\\\u0440\\\\u0430\\\\u0446\\\\u0438\\\\u044f \\\\u0432 \\\\u043f\\\\u0440\\\\u043e\\\\u0446\\\\u0435\\\\u0441\\\\u0441\\\\u044b\\\", \\\"3:update\\\", \\\"1:\\\\u0411\\\\u0430\\\\u0437\\\\u043e\\\\u0432\\\\u043e\\\\u0435 \\\\u0438\\\\u0441\\\\u043f\\\\u043e\\\\u043b\\\\u044c\\\\u0437\\\\u043e\\\\u0432\\\\u0430\\\\u043d\\\\u0438\\\\u0435\\\", \\\"1:.pre-commit-config.yaml\\\", \\\"2:\\\\u0423\\\\u0441\\\\u0442\\\\u0430\\\\u043d\\\\u043e\\\\u0432\\\\u043a\\\\u0430\\\", \\\"2:\\\\u0422\\\\u0440\\\\u0435\\\\u0431\\\\u043e\\\\u0432\\\\u0430\\\\u043d\\\\u0438\\\\u044f\\\", \\\"1:metadata-py\\\", \\\"3:\\\\u041f\\\\u043e\\\\u043b\\\\u044f \\\\u043c\\\\u0435\\\\u0442\\\\u0430\\\\u0434\\\\u0430\\\\u043d\\\\u043d\\\\u044b\\\\u0445\\\", \\\"1:\\\\u0413\\\\u0435\\\\u043d\\\\u0435\\\\u0440\\\\u0430\\\\u0446\\\\u0438\\\\u044f \\\\u043e\\\\u0442\\\\u0447\\\\u0451\\\\u0442\\\\u0430\\\", \\\"1:\\\\u0423\\\\u0441\\\\u0442\\\\u0430\\\\u043d\\\\u043e\\\\u0432\\\\u0438\\\\u0442\\\\u044c \\\\u043a\\\\u043e\\\\u043d\\\\u043a\\\\u0440\\\\u0435\\\\u0442\\\\u043d\\\\u043e\\\\u0433\\\\u043e \\\\u0430\\\\u0432\\\\u0442\\\\u043e\\\\u0440\\\\u0430 \\\\u0438 \\\\u0432\\\\u0435\\\\u0440\\\\u0441\\\\u0438\\\\u044e\\\", \\\"1:\\\\u0418\\\\u0433\\\\u043d\\\\u043e\\\\u0440\\\\u0438\\\\u0440\\\\u043e\\\\u0432\\\\u0430\\\\u0442\\\\u044c \\\\u043e\\\\u043f\\\\u0440\\\\u0435\\\\u0434\\\\u0435\\\\u043b\\\\u0451\\\\u043d\\\\u043d\\\\u044b\\\\u0435 \\\\u0444\\\\u0430\\\\u0439\\\\u043b\\\\u044b\\\", \\\"2:Summary\\\", \\\"2:Version Distribution\\\", \\\"3:CI/CD\\\", \\\"3:report\\\", \\\"1:\\\\u041f\\\\u0440\\\\u0435\\\\u0434\\\\u0432\\\\u0430\\\\u0440\\\\u0438\\\\u0442\\\\u0435\\\\u043b\\\\u044c\\\\u043d\\\\u044b\\\\u0439 \\\\u043f\\\\u0440\\\\u043e\\\\u0441\\\\u043c\\\\u043e\\\\u0442\\\\u0440 \\\\u0438\\\\u0437\\\\u043c\\\\u0435\\\\u043d\\\\u0435\\\\u043d\\\\u0438\\\\u0439\\\", \\\"1:Markdown Files Metadata Report\\\", \\\"2:\\\\u0424\\\\u043e\\\\u0440\\\\u043c\\\\u0430\\\\u0442 \\\\u043c\\\\u0435\\\\u0442\\\\u0430\\\\u0434\\\\u0430\\\\u043d\\\\u043d\\\\u044b\\\\u0445\\\", \\\"2:\\\\u041a\\\\u043e\\\\u043c\\\\u0430\\\\u043d\\\\u0434\\\\u044b\\\"]\"}"
+}
+-->
